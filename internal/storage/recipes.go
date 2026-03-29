@@ -282,19 +282,38 @@ func (d *DB) DeleteRecipe(id, userID string) (bool, error) {
 }
 
 // insertIngredients upserts ingredient definitions and inserts join rows.
+// Duplicate ingredient names within the same recipe are merged by summing quantities.
 func insertIngredients(tx *sql.Tx, recipeID string, inputs []IngredientInput) error {
+	// Deduplicate by normalised name, summing quantities.
+	type merged struct {
+		quantity float64
+		unit     string
+		notes    string
+	}
+	seen := make(map[string]*merged)
+	order := []string{}
 	for _, inp := range inputs {
 		name := strings.TrimSpace(strings.ToLower(inp.Name))
 		if name == "" {
 			continue
 		}
+		if m, ok := seen[name]; ok {
+			m.quantity += inp.Quantity
+		} else {
+			seen[name] = &merged{quantity: inp.Quantity, unit: inp.Unit, notes: inp.Notes}
+			order = append(order, name)
+		}
+	}
+
+	for _, name := range order {
+		m := seen[name]
 		// Upsert ingredient definition
 		ingID := ""
 		err := tx.QueryRow(`SELECT id FROM ingredients WHERE name = ?`, name).Scan(&ingID)
 		if err == sql.ErrNoRows {
 			ingID = uuid.NewString()
 			if _, err = tx.Exec(`INSERT INTO ingredients (id, name, unit) VALUES (?, ?, ?)`,
-				ingID, name, inp.Unit); err != nil {
+				ingID, name, m.unit); err != nil {
 				return fmt.Errorf("insert ingredient %q: %w", name, err)
 			}
 		} else if err != nil {
@@ -302,11 +321,11 @@ func insertIngredients(tx *sql.Tx, recipeID string, inputs []IngredientInput) er
 		}
 
 		riID := uuid.NewString()
-		unitOverride := sql.NullString{String: inp.Unit, Valid: inp.Unit != ""}
+		unitOverride := sql.NullString{String: m.unit, Valid: m.unit != ""}
 		_, err = tx.Exec(`
 			INSERT INTO recipe_ingredients (id, recipe_id, ingredient_id, quantity, unit_override, notes)
 			VALUES (?, ?, ?, ?, ?, ?)`,
-			riID, recipeID, ingID, inp.Quantity, unitOverride, inp.Notes)
+			riID, recipeID, ingID, m.quantity, unitOverride, m.notes)
 		if err != nil {
 			return fmt.Errorf("insert recipe_ingredient: %w", err)
 		}
