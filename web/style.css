@@ -500,22 +500,47 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   .check-label input[type=checkbox] { width: 22px; height: 22px; margin-top: 0; }
   .ingredient-qty { min-width: 64px; font-size: .9rem; }
 
-  /* ── Planning: contenu limité + scroll interne ── */
-  /* On empêche le body de scroller horizontalement */
+  /* ── Planning: jours en colonne, repas en 3 colonnes par jour ── */
   html { overflow-x: hidden; }
-  /* La grille se limite à la largeur de la fenêtre et scroll en interne */
   .planning-grid {
-    grid-template-columns: repeat(7, minmax(150px, 1fr));
-    max-width: calc(100vw - 1.75rem); /* viewport - padding main x2 */
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    gap: .4rem;
+    grid-template-columns: 1fr; /* un jour par ligne */
+    overflow-x: visible;
+    scroll-snap-type: none;
+    gap: .75rem;
+    max-width: 100%;
   }
-  .day-col { scroll-snap-align: start; }
-  .meal-slot { padding: .5rem; }
-  .people-input { width: 44px; height: 36px; font-size: .9rem; }
-  .recipe-select { padding: .4rem .25rem; font-size: .82rem; }
+  /* Chaque jour : header sur toute la largeur + 3 repas côte à côte */
+  .day-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: var(--shadow);
+    min-width: 0;
+  }
+  .day-header {
+    grid-column: 1 / -1;
+    border-radius: 0;
+    font-size: .9rem;
+    padding: .5rem;
+  }
+  .meal-slot {
+    border: none;
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-radius: 0 !important;
+    padding: .5rem .4rem;
+    min-height: 70px;
+  }
+  .meal-slot:last-child { border-right: none; }
+  .meal-label { font-size: .65rem; margin-bottom: .2rem; }
+  .plan-item { font-size: .78rem; }
+  .plan-item > span { font-size: .78rem; }
+  .plan-item-meta { gap: .15rem; flex-wrap: wrap; }
+  .people-input { width: 36px; height: 30px; font-size: .78rem; padding: .1rem; }
+  .recipe-select { padding: .3rem .15rem; font-size: .72rem; }
   .week-nav { font-size: .82rem; gap: .35rem; }
 
   /* ── Pantry: row sur 2 lignes pour éviter le débordement ── */
