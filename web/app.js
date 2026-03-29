@@ -342,6 +342,69 @@ function app() {
       await this.importShared({ url });
     },
 
+    async importFromFile(event) {
+      const file = event.target.files[0];
+      event.target.value = ''; // reset so same file can be re-selected
+      if (!file) return;
+
+      this.importError = '';
+
+      if (file.type.startsWith('image/')) {
+        // Upload image, then import by URL
+        this.importing = true;
+        const fd = new FormData();
+        fd.append('photo', file);
+        try {
+          const res = await fetch('/api/upload', { method: 'POST', body: fd });
+          if (!res.ok) {
+            this.importing = false;
+            const err = await res.json();
+            this.importError = err.error || 'Erreur lors de l\'upload';
+            return;
+          }
+          const { url } = await res.json();
+          await this.importShared({ imageUrl: url });
+        } catch (_) {
+          this.importing = false;
+          this.importError = 'Erreur réseau lors de l\'upload';
+        }
+
+      } else if (file.type.startsWith('video/')) {
+        // Extract a frame then treat as image
+        this.importing = true;
+        try {
+          const blob = await extractVideoFrame(file);
+          const frame = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
+          const fd = new FormData();
+          fd.append('photo', frame);
+          const res = await fetch('/api/upload', { method: 'POST', body: fd });
+          if (!res.ok) {
+            this.importing = false;
+            const err = await res.json();
+            this.importError = err.error || 'Erreur lors de l\'upload';
+            return;
+          }
+          const { url } = await res.json();
+          await this.importShared({ imageUrl: url });
+        } catch (e) {
+          this.importing = false;
+          this.importError = e.message || 'Impossible d\'extraire une image de la vidéo';
+        }
+
+      } else if (file.type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name)) {
+        // Read text file client-side
+        try {
+          const text = await file.text();
+          await this.importShared({ text });
+        } catch (_) {
+          this.importError = 'Impossible de lire le fichier texte';
+        }
+
+      } else {
+        this.importError = 'Format non supporté. Utilisez une image, un fichier texte (.txt, .md) ou une vidéo.';
+      }
+    },
+
     async importShared({ url, text, imageUrl }) {
       this.importing = true;
       this.importError = '';
@@ -456,6 +519,37 @@ function mondayOf(date) {
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+// Extracts a JPEG frame from a local video file using canvas.
+function extractVideoFrame(file) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const objectUrl = URL.createObjectURL(file);
+    video.src = objectUrl;
+    video.muted = true;
+    video.playsInline = true;
+    video.onloadedmetadata = () => {
+      // Seek to 10% of duration or 5 s, whichever is smaller
+      video.currentTime = Math.min(video.duration * 0.1, 5);
+    };
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      URL.revokeObjectURL(objectUrl);
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('Impossible d\'extraire une image de la vidéo'));
+      }, 'image/jpeg', 0.85);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Format vidéo non supporté par ce navigateur'));
+    };
+    video.load();
+  });
 }
 
 function fmtDate(date) {

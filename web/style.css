@@ -344,11 +344,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   font-size: .8rem; color: var(--green); margin-left: .3rem;
 }
 
-/* ── Import URL bar ─────────────────────────────────────────────── */
+/* ── Import bar ─────────────────────────────────────────────────── */
 .import-bar {
   display: flex;
   gap: .5rem;
   margin-bottom: 1.5rem;
+  align-items: center;
+}
+.import-bar-url {
+  display: flex;
+  gap: .5rem;
+  flex: 1;
+  min-width: 0;
 }
 .import-bar-input {
   flex: 1;
@@ -364,7 +371,19 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(45,106,79,.15);
 }
-.import-bar button { white-space: nowrap; }
+.import-bar-url button { white-space: nowrap; }
+.import-file-btn {
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+}
+.import-file-btn.disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 /* ── Print ───────────────────────────────────────────────────────── */
 @media print {
