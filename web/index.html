@@ -17,10 +17,18 @@
     <div class="header-inner">
       <h1>Recettes</h1>
       <nav>
-        <button :class="{active: page==='recipes'}"   @click="page='recipes'">Recettes</button>
-        <button :class="{active: page==='planning'}"  @click="page='planning'; loadPlanning()">Planning</button>
-        <button :class="{active: page==='shopping'}"  @click="page='shopping'; loadShopping()">Courses</button>
-        <button :class="{active: page==='pantry'}"    @click="page='pantry'; loadPantry()">Garde-manger</button>
+        <button :class="{active: page==='recipes'}"  @click="page='recipes'">
+          <span class="nav-icon">🍽️</span><span class="nav-label">Recettes</span>
+        </button>
+        <button :class="{active: page==='planning'}" @click="page='planning'; loadPlanning()">
+          <span class="nav-icon">📅</span><span class="nav-label">Planning</span>
+        </button>
+        <button :class="{active: page==='shopping'}" @click="page='shopping'; loadShopping()">
+          <span class="nav-icon">🛒</span><span class="nav-label">Courses</span>
+        </button>
+        <button :class="{active: page==='pantry'}"   @click="page='pantry'; loadPantry()">
+          <span class="nav-icon">🥫</span><span class="nav-label">Garde-manger</span>
+        </button>
       </nav>
       <div class="user-area">
         <template x-if="user">
