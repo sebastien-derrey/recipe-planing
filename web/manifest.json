@@ -1,0 +1,25 @@
+{
+  "name": "Gestionnaire de Recettes",
+  "short_name": "Recettes",
+  "description": "Gérez vos recettes, planifiez vos repas et faites vos courses",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f0",
+  "theme_color": "#2d6a4f",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text":  "text",
+      "url":   "url",
+      "files": [{ "name": "file", "accept": ["image/*"] }]
+    }
+  }
+}

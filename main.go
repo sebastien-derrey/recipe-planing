@@ -4,6 +4,10 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
 	"io/fs"
 	"log"
 	"net/http"
@@ -46,6 +50,21 @@ func runServer() {
 	// API + auth routes
 	api.New(mux, db, cfg)
 
+	// PWA files served at root scope (service worker scope must match app root)
+	mux.HandleFunc("GET /sw.js", func(w http.ResponseWriter, r *http.Request) {
+		data, _ := webFS.ReadFile("web/sw.js")
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Service-Worker-Allowed", "/")
+		w.Write(data)
+	})
+	mux.HandleFunc("GET /manifest.json", func(w http.ResponseWriter, r *http.Request) {
+		data, _ := webFS.ReadFile("web/manifest.json")
+		w.Header().Set("Content-Type", "application/manifest+json")
+		w.Write(data)
+	})
+	mux.HandleFunc("GET /icon-192.png", makeIcon(192))
+	mux.HandleFunc("GET /icon-512.png", makeIcon(512))
+
 	// Serve embedded web files
 	webSub, err := fs.Sub(webFS, "web")
 	if err != nil {
@@ -75,6 +94,17 @@ func runServer() {
 	log.Printf("recipe_manager listening on http://localhost%s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("server: %v", err)
+	}
+}
+
+// makeIcon returns a handler that generates a solid-green PNG icon of the given size.
+func makeIcon(size int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		img := image.NewRGBA(image.Rect(0, 0, size, size))
+		draw.Draw(img, img.Bounds(), &image.Uniform{color.RGBA{0x2d, 0x6a, 0x4f, 0xff}}, image.Point{}, draw.Src)
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=604800")
+		png.Encode(w, img)
 	}
 }
 
