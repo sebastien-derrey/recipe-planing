@@ -385,6 +385,23 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   pointer-events: none;
 }
 
+/* ── Planning default template ───────────────────────────────────── */
+.btn-active {
+  background: var(--green-bg);
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 600;
+}
+.planning-hint {
+  font-size: .88rem;
+  color: var(--green);
+  background: var(--green-bg);
+  border-left: 3px solid var(--green);
+  padding: .5rem .75rem;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 1rem;
+}
+
 /* ── Print ───────────────────────────────────────────────────────── */
 @media print {
   header, nav, .page-header button, .week-nav, .recipe-grid,

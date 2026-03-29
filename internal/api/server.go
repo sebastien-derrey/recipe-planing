@@ -54,6 +54,13 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Photo upload (protected)
 	mux.Handle("POST /api/upload", requireAuth(http.HandlerFunc(s.handleUpload)))
 
+	// Default weekly plan template (protected)
+	mux.Handle("GET /api/default-plan", requireAuth(http.HandlerFunc(s.handleGetDefaultPlan)))
+	mux.Handle("PUT /api/default-plan/items", requireAuth(http.HandlerFunc(s.handleReplaceDefaultPlanItems)))
+
+	// Import from URL / text / image via Claude (protected)
+	mux.Handle("POST /api/import", requireAuth(http.HandlerFunc(s.handleImport)))
+
 	// MCP service token routes
 	if s.cfg.MCPServiceToken != "" {
 		mux.Handle("GET /api/mcp/recipes", mcpAuth(s.cfg.MCPServiceToken)(http.HandlerFunc(s.handleMCPListRecipes)))

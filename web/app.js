@@ -14,6 +14,8 @@ function app() {
     currentWeek: mondayOf(new Date()),
     planItems: [],
     planID: null,
+    editingDefault: false,
+    defaultPlanItems: [],
     days: [
       { n: 1, label: 'Lundi' },
       { n: 2, label: 'Mardi' },
@@ -246,44 +248,72 @@ function app() {
       }
     },
 
+    // Returns the item for a given slot — delegates to the active list (week or template)
     getPlanItem(dayOfWeek, mealType) {
-      return this.planItems.find(i => i.day_of_week === dayOfWeek && i.meal_type === mealType) || null;
+      const list = this.editingDefault ? this.defaultPlanItems : this.planItems;
+      return list.find(i => i.day_of_week === dayOfWeek && i.meal_type === mealType) || null;
     },
 
     async addPlanItem(dayOfWeek, mealType, recipeID) {
       if (!recipeID) return;
-      const newItems = [
-        ...this.planItems.map(i => ({
-          recipe_id: i.recipe_id,
-          day_of_week: i.day_of_week,
-          meal_type: i.meal_type,
-          people_count: i.people_count,
-        })),
-        { recipe_id: recipeID, day_of_week: dayOfWeek, meal_type: mealType, people_count: 4 },
-      ];
-      await this.savePlanItems(newItems);
+      if (this.editingDefault) {
+        const newItems = [
+          ...this.defaultPlanItems.map(i => ({
+            recipe_id: i.recipe_id, day_of_week: i.day_of_week,
+            meal_type: i.meal_type, people_count: i.people_count,
+          })),
+          { recipe_id: recipeID, day_of_week: dayOfWeek, meal_type: mealType, people_count: 4 },
+        ];
+        await this.saveDefaultItems(newItems);
+      } else {
+        const newItems = [
+          ...this.planItems.map(i => ({
+            recipe_id: i.recipe_id, day_of_week: i.day_of_week,
+            meal_type: i.meal_type, people_count: i.people_count,
+          })),
+          { recipe_id: recipeID, day_of_week: dayOfWeek, meal_type: mealType, people_count: 4 },
+        ];
+        await this.savePlanItems(newItems);
+      }
     },
 
     async removePlanItem(item) {
-      const newItems = this.planItems
-        .filter(i => i.id !== item.id)
-        .map(i => ({
-          recipe_id: i.recipe_id,
-          day_of_week: i.day_of_week,
-          meal_type: i.meal_type,
-          people_count: i.people_count,
-        }));
-      await this.savePlanItems(newItems);
+      if (this.editingDefault) {
+        const newItems = this.defaultPlanItems
+          .filter(i => i.id !== item.id)
+          .map(i => ({
+            recipe_id: i.recipe_id, day_of_week: i.day_of_week,
+            meal_type: i.meal_type, people_count: i.people_count,
+          }));
+        await this.saveDefaultItems(newItems);
+      } else {
+        const newItems = this.planItems
+          .filter(i => i.id !== item.id)
+          .map(i => ({
+            recipe_id: i.recipe_id, day_of_week: i.day_of_week,
+            meal_type: i.meal_type, people_count: i.people_count,
+          }));
+        await this.savePlanItems(newItems);
+      }
     },
 
     async updatePeopleCount(item, count) {
-      const newItems = this.planItems.map(i => ({
-        recipe_id:    i.recipe_id,
-        day_of_week:  i.day_of_week,
-        meal_type:    i.meal_type,
-        people_count: i.id === item.id ? parseInt(count) || 4 : i.people_count,
-      }));
-      await this.savePlanItems(newItems);
+      if (this.editingDefault) {
+        const newItems = this.defaultPlanItems.map(i => ({
+          recipe_id: i.recipe_id, day_of_week: i.day_of_week,
+          meal_type: i.meal_type,
+          people_count: i.id === item.id ? parseInt(count) || 4 : i.people_count,
+        }));
+        await this.saveDefaultItems(newItems);
+      } else {
+        const newItems = this.planItems.map(i => ({
+          recipe_id:    i.recipe_id,
+          day_of_week:  i.day_of_week,
+          meal_type:    i.meal_type,
+          people_count: i.id === item.id ? parseInt(count) || 4 : i.people_count,
+        }));
+        await this.savePlanItems(newItems);
+      }
     },
 
     async savePlanItems(items) {
@@ -292,9 +322,26 @@ function app() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(items),
       });
-      if (res.ok) {
-        await this.loadPlanning();
+      if (res.ok) await this.loadPlanning();
+    },
+
+    // ── Default plan template ────────────────────────────────────────────
+
+    async toggleDefaultPlan() {
+      this.editingDefault = !this.editingDefault;
+      if (this.editingDefault) {
+        const res = await fetch('/api/default-plan');
+        if (res.ok) this.defaultPlanItems = await res.json();
       }
+    },
+
+    async saveDefaultItems(items) {
+      const res = await fetch('/api/default-plan/items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(items),
+      });
+      if (res.ok) this.defaultPlanItems = await res.json();
     },
 
     changeWeek(days) {

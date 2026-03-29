@@ -123,6 +123,18 @@ func migrate(db *sql.DB) error {
 			UNIQUE(user_id, ingredient)
 		);
 		CREATE INDEX IF NOT EXISTS idx_pantry_user ON pantry_items(user_id);
+
+		CREATE TABLE IF NOT EXISTS default_plan_items (
+			id           TEXT PRIMARY KEY,
+			user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			day_of_week  INTEGER NOT NULL CHECK(day_of_week BETWEEN 1 AND 7),
+			meal_type    TEXT NOT NULL DEFAULT 'dinner'
+			             CHECK(meal_type IN ('breakfast','lunch','dinner','snack')),
+			recipe_id    TEXT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+			people_count INTEGER NOT NULL DEFAULT 4,
+			UNIQUE(user_id, day_of_week, meal_type)
+		);
+		CREATE INDEX IF NOT EXISTS idx_dpi_user ON default_plan_items(user_id);
 	`)
 	return err
 }

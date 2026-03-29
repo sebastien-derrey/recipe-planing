@@ -114,13 +114,26 @@
     <!-- ── PLANNING PAGE ─────────────────────────────────────────────── -->
     <div x-show="page==='planning'">
       <div class="page-header">
-        <h2>Planning de la semaine</h2>
-        <div class="week-nav">
-          <button class="btn-sm" @click="changeWeek(-7)">&#8249;</button>
-          <span x-text="formatWeekLabel(currentWeek)"></span>
-          <button class="btn-sm" @click="changeWeek(7)">&#8250;</button>
-        </div>
+        <h2 x-text="editingDefault ? 'Modèle de semaine type' : 'Planning de la semaine'"></h2>
+        <template x-if="!editingDefault">
+          <div class="week-nav">
+            <button class="btn-sm" @click="changeWeek(-7)">&#8249;</button>
+            <span x-text="formatWeekLabel(currentWeek)"></span>
+            <button class="btn-sm" @click="changeWeek(7)">&#8250;</button>
+          </div>
+        </template>
+        <button class="btn-sm" :class="{'btn-active': editingDefault}"
+                @click="toggleDefaultPlan()"
+                x-text="editingDefault ? '← Retour au planning' : '⚙ Modèle par défaut'">
+        </button>
       </div>
+
+      <template x-if="editingDefault">
+        <p class="planning-hint">
+          Ce modèle est appliqué automatiquement à chaque nouvelle semaine.
+          Modifiez-le comme un planning normal.
+        </p>
+      </template>
 
       <div class="planning-grid">
         <template x-for="day in days" :key="day.n">

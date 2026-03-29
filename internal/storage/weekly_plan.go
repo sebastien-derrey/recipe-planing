@@ -35,7 +35,78 @@ type WeeklyPlanItemInput struct {
 	PeopleCount int    `json:"people_count"`
 }
 
+// DefaultPlanItem is a slot in the reusable weekly template.
+type DefaultPlanItem struct {
+	ID          string `json:"id"`
+	DayOfWeek   int    `json:"day_of_week"`
+	MealType    string `json:"meal_type"`
+	RecipeID    string `json:"recipe_id"`
+	RecipeTitle string `json:"recipe_title,omitempty"`
+	PeopleCount int    `json:"people_count"`
+}
+
+// ListDefaultPlan returns all items of the user's default weekly template.
+func (d *DB) ListDefaultPlan(userID string) ([]DefaultPlanItem, error) {
+	rows, err := d.db.Query(`
+		SELECT dpi.id, dpi.day_of_week, dpi.meal_type,
+		       dpi.recipe_id, COALESCE(r.title,''), dpi.people_count
+		FROM default_plan_items dpi
+		LEFT JOIN recipes r ON r.id = dpi.recipe_id
+		WHERE dpi.user_id = ?
+		ORDER BY dpi.day_of_week, dpi.meal_type`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []DefaultPlanItem
+	for rows.Next() {
+		var it DefaultPlanItem
+		if err := rows.Scan(&it.ID, &it.DayOfWeek, &it.MealType,
+			&it.RecipeID, &it.RecipeTitle, &it.PeopleCount); err != nil {
+			return nil, err
+		}
+		out = append(out, it)
+	}
+	if out == nil {
+		out = []DefaultPlanItem{}
+	}
+	return out, rows.Err()
+}
+
+// ReplaceDefaultPlanItems atomically replaces the user's default template.
+func (d *DB) ReplaceDefaultPlanItems(userID string, inputs []WeeklyPlanItemInput) ([]DefaultPlanItem, error) {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`DELETE FROM default_plan_items WHERE user_id=?`, userID); err != nil {
+		return nil, err
+	}
+	for _, inp := range inputs {
+		if inp.MealType == "" {
+			inp.MealType = "dinner"
+		}
+		if inp.PeopleCount == 0 {
+			inp.PeopleCount = 4
+		}
+		_, err := tx.Exec(`
+			INSERT INTO default_plan_items (id, user_id, day_of_week, meal_type, recipe_id, people_count)
+			VALUES (?, ?, ?, ?, ?, ?)`,
+			uuid.NewString(), userID, inp.DayOfWeek, inp.MealType, inp.RecipeID, inp.PeopleCount)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return d.ListDefaultPlan(userID)
+}
+
 // GetOrCreateWeeklyPlan returns the plan for the given week, creating it if absent.
+// When a new week is created, the default template (if any) is automatically applied.
 func (d *DB) GetOrCreateWeeklyPlan(userID, weekStart string) (*WeeklyPlan, error) {
 	plan := &WeeklyPlan{}
 	err := d.db.QueryRow(`
@@ -43,7 +114,9 @@ func (d *DB) GetOrCreateWeeklyPlan(userID, weekStart string) (*WeeklyPlan, error
 		FROM weekly_plans WHERE user_id=? AND week_start=?`, userID, weekStart).
 		Scan(&plan.ID, &plan.UserID, &plan.WeekStart, &plan.CreatedAt)
 
+	isNew := false
 	if err == sql.ErrNoRows {
+		isNew = true
 		plan.ID = uuid.NewString()
 		plan.UserID = userID
 		plan.WeekStart = weekStart
@@ -56,6 +129,21 @@ func (d *DB) GetOrCreateWeeklyPlan(userID, weekStart string) (*WeeklyPlan, error
 		}
 	} else if err != nil {
 		return nil, err
+	}
+
+	// Auto-apply default template to brand-new weeks
+	if isNew {
+		defaults, err := d.ListDefaultPlan(userID)
+		if err == nil && len(defaults) > 0 {
+			for _, def := range defaults {
+				_, _ = d.db.Exec(`
+					INSERT INTO weekly_plan_items
+					  (id, weekly_plan_id, recipe_id, day_of_week, meal_type, people_count)
+					VALUES (?, ?, ?, ?, ?, ?)`,
+					uuid.NewString(), plan.ID, def.RecipeID,
+					def.DayOfWeek, def.MealType, def.PeopleCount)
+			}
+		}
 	}
 
 	items, err := d.getWeeklyPlanItems(plan.ID)
