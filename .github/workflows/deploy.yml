@@ -1,0 +1,30 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/recipe-manager
+
+            # Récupérer les derniers changements
+            git pull origin master
+
+            # Recompiler (Go doit être installé sur le VPS)
+            go build -o recipe-manager .
+
+            # Redémarrer le service
+            systemctl restart recipe-manager
+
+            echo "✅ Déploiement terminé"
