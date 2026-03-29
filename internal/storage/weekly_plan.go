@@ -73,24 +73,30 @@ func (d *DB) ListDefaultPlan(userID string) ([]DefaultPlanItem, error) {
 	return out, rows.Err()
 }
 
-// ReplaceDefaultPlanItems atomically replaces the user's default template.
+// ReplaceDefaultPlanItems atomically replaces the user's default template and
+// propagates the change to all existing weekly plans beyond next week.
 func (d *DB) ReplaceDefaultPlanItems(userID string, inputs []WeeklyPlanItemInput) ([]DefaultPlanItem, error) {
+	// Normalise inputs once
+	for i := range inputs {
+		if inputs[i].MealType == "" {
+			inputs[i].MealType = "dinner"
+		}
+		if inputs[i].PeopleCount == 0 {
+			inputs[i].PeopleCount = 4
+		}
+	}
+
 	tx, err := d.db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
+	// 1. Replace default template
 	if _, err := tx.Exec(`DELETE FROM default_plan_items WHERE user_id=?`, userID); err != nil {
 		return nil, err
 	}
 	for _, inp := range inputs {
-		if inp.MealType == "" {
-			inp.MealType = "dinner"
-		}
-		if inp.PeopleCount == 0 {
-			inp.PeopleCount = 4
-		}
 		_, err := tx.Exec(`
 			INSERT INTO default_plan_items (id, user_id, day_of_week, meal_type, recipe_id, people_count)
 			VALUES (?, ?, ?, ?, ?, ?)`,
@@ -99,6 +105,53 @@ func (d *DB) ReplaceDefaultPlanItems(userID string, inputs []WeeklyPlanItemInput
 			return nil, err
 		}
 	}
+
+	// 2. Propagate to weeks strictly after next week
+	now := time.Now().UTC()
+	weekday := int(now.Weekday())
+	if weekday == 0 {
+		weekday = 7 // Sunday → 7
+	}
+	currentMonday := now.AddDate(0, 0, 1-weekday)
+	cutoff := currentMonday.AddDate(0, 0, 7).Format("2006-01-02") // next Monday
+
+	rows, err := tx.Query(
+		`SELECT id FROM weekly_plans WHERE user_id=? AND week_start > ?`,
+		userID, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	var planIDs []string
+	for rows.Next() {
+		var pid string
+		if err := rows.Scan(&pid); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		planIDs = append(planIDs, pid)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for _, pid := range planIDs {
+		if _, err := tx.Exec(`DELETE FROM weekly_plan_items WHERE weekly_plan_id=?`, pid); err != nil {
+			return nil, err
+		}
+		for _, inp := range inputs {
+			_, err := tx.Exec(`
+				INSERT INTO weekly_plan_items
+				  (id, weekly_plan_id, recipe_id, day_of_week, meal_type, people_count)
+				VALUES (?, ?, ?, ?, ?, ?)`,
+				uuid.NewString(), pid, inp.RecipeID,
+				inp.DayOfWeek, inp.MealType, inp.PeopleCount)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
