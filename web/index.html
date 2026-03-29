@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestionnaire de Recettes</title>
   <link rel="stylesheet" href="/web/style.css">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="theme-color" content="#2d6a4f">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body x-data="app()" x-init="init()">
@@ -61,6 +64,17 @@
         <h2>Mes recettes</h2>
         <button class="btn-primary" @click="openRecipeForm(null)">+ Nouvelle recette</button>
       </div>
+
+      <!-- Import URL bar -->
+      <form class="import-bar" @submit.prevent="importFromUrl()">
+        <input type="url" x-model="importUrl"
+               placeholder="Coller un lien de recette à importer…"
+               class="import-bar-input" :disabled="importing">
+        <button type="submit" class="btn-primary" :disabled="importing || !importUrl.trim()">
+          <span x-show="!importing">Importer</span>
+          <span x-show="importing">Import…</span>
+        </button>
+      </form>
 
       <div x-show="recipes.length === 0 && !loadingRecipes" class="empty-state">
         Aucune recette. Ajoutez-en une !
@@ -341,6 +355,29 @@
     </div>
   </div>
 
+  <!-- ── IMPORT OVERLAY ────────────────────────────────────────── -->
+  <div class="import-overlay" x-show="importing" x-cloak>
+    <div class="import-card">
+      <div class="import-spinner"></div>
+      <p>Import de la recette en cours...</p>
+    </div>
+  </div>
+
+  <!-- Import success / error toast -->
+  <div class="import-toast import-toast-success" x-show="importSuccess" x-cloak>
+    ✓ Recette importée avec succès !
+  </div>
+  <div class="import-toast import-toast-error" x-show="importError" x-cloak>
+    <span x-text="importError"></span>
+    <button class="btn-icon" @click="importError=''">✕</button>
+  </div>
+
+  <!-- Login required after share (photo shared while logged out) -->
+  <div class="import-toast import-toast-info" x-show="shareLoginRequired" x-cloak>
+    Connectez-vous puis repartagez la photo pour l'importer.
+    <button class="btn-icon" @click="shareLoginRequired=false">✕</button>
+  </div>
+
   <!-- Units datalist — add new units here to extend the list -->
   <datalist id="units-list">
     <!-- Volume -->
@@ -382,5 +419,10 @@
   </datalist>
 
   <script src="/web/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    }
+  </script>
 </body>
 </html>

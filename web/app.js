@@ -28,6 +28,14 @@ function app() {
     // Shopping
     shoppingList: [],
 
+    // Import / share
+    importing: false,
+    importError: '',
+    importSuccess: false,
+    importUrl: '',
+    pendingShare: null,
+    shareLoginRequired: false,
+
     // Pantry
     pantry: [],
     loadingPantry: false,
@@ -64,12 +72,36 @@ function app() {
     photoDragOver: false,
 
     async init() {
+      // Capture share params before anything else clears the URL
+      const params = new URLSearchParams(window.location.search);
+      const shareUrl   = params.get('share_url');
+      const shareText  = params.get('share_text');
+      const shareImage = params.get('share_image');
+      const loginRequired = params.get('share_login_required');
+      if (shareUrl || shareText || shareImage || loginRequired) {
+        history.replaceState({}, '', '/');
+      }
+      if (loginRequired) {
+        this.shareLoginRequired = true;
+      } else if (shareUrl || shareText || shareImage) {
+        this.pendingShare = { url: shareUrl, text: shareText, imageUrl: shareImage };
+      }
+
+      // Auth check
       try {
         const res = await fetch('/auth/me');
         if (res.ok) this.user = await res.json();
       } catch (_) {}
       this.userLoaded = true;
-      if (this.user) this.loadRecipes();
+
+      if (this.user) {
+        this.loadRecipes();
+        if (this.pendingShare) {
+          const share = this.pendingShare;
+          this.pendingShare = null;
+          this.importShared(share);
+        }
+      }
     },
 
     // ── Auth ────────────────────────────────────────────────────────────
@@ -87,6 +119,11 @@ function app() {
         this.user = await res.json();
         this.loginForm = { username: '', password: '' };
         this.loadRecipes();
+        if (this.pendingShare) {
+          const share = this.pendingShare;
+          this.pendingShare = null;
+          this.importShared(share);
+        }
       } else {
         const err = await res.json();
         this.loginError = err.error || 'Erreur de connexion';
@@ -294,6 +331,44 @@ function app() {
 
     printShopping() {
       window.print();
+    },
+
+    // ── Import / Web Share Target ────────────────────────────────────────
+
+    async importFromUrl() {
+      const url = this.importUrl.trim();
+      if (!url) return;
+      this.importUrl = '';
+      await this.importShared({ url });
+    },
+
+    async importShared({ url, text, imageUrl }) {
+      this.importing = true;
+      this.importError = '';
+      const body = {};
+      if (url)      body.url       = url;
+      if (text)     body.text      = text;
+      if (imageUrl) body.image_url = imageUrl;
+      try {
+        const res = await fetch('/api/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        this.importing = false;
+        if (res.ok) {
+          this.importSuccess = true;
+          await this.loadRecipes();
+          this.page = 'recipes';
+          setTimeout(() => { this.importSuccess = false; }, 5000);
+        } else {
+          const err = await res.json();
+          this.importError = err.error || 'Erreur lors de l\'import';
+        }
+      } catch (_) {
+        this.importing = false;
+        this.importError = 'Erreur réseau lors de l\'import';
+      }
     },
 
     // ── Pantry ──────────────────────────────────────────────────────────
