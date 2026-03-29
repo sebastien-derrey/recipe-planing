@@ -45,15 +45,16 @@ header h1 {
 }
 nav { display: flex; gap: .25rem; flex: 1; }
 nav button {
-  background: transparent; border: none; color: rgba(255,255,255,.8);
-  padding: .45rem 1rem; border-radius: 8px; cursor: pointer;
-  font-size: .9rem; font-weight: 500;
+  background: transparent; border: none; color: rgba(255,255,255,.75);
+  padding: .3rem .9rem; border-radius: 8px; cursor: pointer;
+  font-size: .9rem; font-weight: 500; display: inline-flex;
+  align-items: center; gap: .45rem;
   transition: background .15s, color .15s;
 }
 nav button:hover { background: rgba(255,255,255,.15); color: #fff; }
-nav button.active {
-  background: rgba(255,255,255,.2); color: #fff; font-weight: 600;
-}
+nav button.active { background: rgba(255,255,255,.2); color: #fff; font-weight: 600; }
+.nav-icon { display: flex; align-items: center; justify-content: center; }
+.nav-icon svg { display: block; }
 
 /* ── User area ───────────────────────────────────────────────────── */
 .user-area { margin-left: auto; }
@@ -428,7 +429,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
 }
 
 /* ── Nav icons (hidden on desktop) ──────────────────────────────── */
-.nav-icon { display: none; font-size: 1.4rem; line-height: 1; }
+.nav-icon { display: none; }
 
 /* ── Print ───────────────────────────────────────────────────────── */
 @media print {
@@ -469,16 +470,22 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
     flex: none; height: auto;
   }
   nav button {
-    flex: 1; flex-direction: column; gap: .15rem;
+    flex: 1; flex-direction: column; gap: .2rem;
     color: var(--grey); background: transparent;
     border: none; border-radius: 0;
-    padding: .45rem .25rem .5rem;
+    padding: .5rem .25rem .55rem;
     font-size: .62rem; font-weight: 500; min-height: 56px;
     transition: color .15s;
   }
   nav button.active { color: var(--green); }
   nav button:hover  { background: var(--grey-lt); }
-  .nav-icon  { display: block; }
+  .nav-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 28px; border-radius: 14px;
+    transition: background .15s;
+  }
+  nav button.active .nav-icon { background: var(--green-bg); }
+  .nav-icon svg { width: 22px; height: 22px; }
   .nav-label { display: block; }
   .user-info > span:first-child { display: none; }
 
