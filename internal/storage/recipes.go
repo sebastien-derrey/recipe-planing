@@ -192,6 +192,29 @@ func (d *DB) getRecipeIngredients(recipeID string) ([]RecipeIngredient, error) {
 	return out, rows.Err()
 }
 
+// FindByURLOrTitle returns the first recipe matching source_url (if non-empty)
+// or title (case-insensitive) for the given user. Returns nil if none found.
+func (d *DB) FindByURLOrTitle(userID, sourceURL, title string) (*Recipe, error) {
+	var id string
+	var err error
+	if sourceURL != "" {
+		err = d.db.QueryRow(
+			`SELECT id FROM recipes WHERE user_id = ? AND source_url = ? LIMIT 1`,
+			userID, sourceURL,
+		).Scan(&id)
+	}
+	if (err != nil || id == "") && title != "" {
+		err = d.db.QueryRow(
+			`SELECT id FROM recipes WHERE user_id = ? AND lower(title) = lower(?) LIMIT 1`,
+			userID, title,
+		).Scan(&id)
+	}
+	if err != nil || id == "" {
+		return nil, nil
+	}
+	return d.GetRecipe(id, userID)
+}
+
 // CreateRecipe inserts a new recipe together with its ingredient lines and tags.
 func (d *DB) CreateRecipe(userID string, r *Recipe, inputs []IngredientInput) (*Recipe, error) {
 	tx, err := d.db.Begin()

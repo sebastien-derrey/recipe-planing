@@ -69,14 +69,35 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created, err := s.db.CreateRecipe(user.ID, &storage.Recipe{
+	recipe := &storage.Recipe{
 		Title:        draft.Title,
 		Description:  draft.Description,
 		Instructions: draft.Instructions,
 		Servings:     draft.Servings,
 		Tags:         draft.Tags,
 		SourceURL:    draft.SourceURL,
-	}, draft.Ingredients)
+	}
+
+	// Check for an existing recipe with the same URL or title → update it
+	existing, err := s.db.FindByURLOrTitle(user.ID, draft.SourceURL, draft.Title)
+	if err != nil {
+		errorJSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if existing != nil {
+		// Preserve the existing photo if none comes with the import
+		recipe.ImageURL = existing.ImageURL
+		updated, err := s.db.UpdateRecipe(existing.ID, user.ID, recipe, draft.Ingredients)
+		if err != nil {
+			errorJSON(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, updated)
+		return
+	}
+
+	created, err := s.db.CreateRecipe(user.ID, recipe, draft.Ingredients)
 	if err != nil {
 		errorJSON(w, http.StatusInternalServerError, err.Error())
 		return
