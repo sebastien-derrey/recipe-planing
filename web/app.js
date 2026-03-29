@@ -344,55 +344,32 @@ function app() {
 
     async importFromFile(event) {
       const file = event.target.files[0];
-      event.target.value = ''; // reset so same file can be re-selected
+      event.target.value = '';
       if (!file) return;
-
       this.importError = '';
 
       if (file.type.startsWith('image/')) {
-        // Upload image, then import by URL
-        this.importing = true;
-        const fd = new FormData();
-        fd.append('photo', file);
+        // Convert to base64 and send directly — avoids HTTPS requirement
         try {
-          const res = await fetch('/api/upload', { method: 'POST', body: fd });
-          if (!res.ok) {
-            this.importing = false;
-            const err = await res.json();
-            this.importError = err.error || 'Erreur lors de l\'upload';
-            return;
-          }
-          const { url } = await res.json();
-          await this.importShared({ imageUrl: url });
+          const { base64, mediaType } = await fileToBase64(file);
+          await this.importShared({ imageBase64: base64, imageMediaType: mediaType });
         } catch (_) {
-          this.importing = false;
-          this.importError = 'Erreur réseau lors de l\'upload';
+          this.importError = 'Impossible de lire l\'image';
         }
 
       } else if (file.type.startsWith('video/')) {
-        // Extract a frame then treat as image
+        // Extract a frame via canvas, convert to base64
         this.importing = true;
         try {
           const blob = await extractVideoFrame(file);
-          const frame = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
-          const fd = new FormData();
-          fd.append('photo', frame);
-          const res = await fetch('/api/upload', { method: 'POST', body: fd });
-          if (!res.ok) {
-            this.importing = false;
-            const err = await res.json();
-            this.importError = err.error || 'Erreur lors de l\'upload';
-            return;
-          }
-          const { url } = await res.json();
-          await this.importShared({ imageUrl: url });
+          const { base64, mediaType } = await blobToBase64(blob);
+          await this.importShared({ imageBase64: base64, imageMediaType: mediaType });
         } catch (e) {
           this.importing = false;
           this.importError = e.message || 'Impossible d\'extraire une image de la vidéo';
         }
 
       } else if (file.type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name)) {
-        // Read text file client-side
         try {
           const text = await file.text();
           await this.importShared({ text });
@@ -405,13 +382,15 @@ function app() {
       }
     },
 
-    async importShared({ url, text, imageUrl }) {
+    async importShared({ url, text, imageUrl, imageBase64, imageMediaType } = {}) {
       this.importing = true;
       this.importError = '';
       const body = {};
-      if (url)      body.url       = url;
-      if (text)     body.text      = text;
-      if (imageUrl) body.image_url = imageUrl;
+      if (url)          body.url              = url;
+      if (text)         body.text             = text;
+      if (imageUrl)     body.image_url        = imageUrl;
+      if (imageBase64)  body.image_base64     = imageBase64;
+      if (imageMediaType) body.image_media_type = imageMediaType;
       try {
         const res = await fetch('/api/import', {
           method: 'POST',
@@ -519,6 +498,32 @@ function mondayOf(date) {
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+// Reads a File as base64 (strips the data-URL prefix).
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parts = reader.result.split(',');
+      resolve({ base64: parts[1], mediaType: file.type || 'image/jpeg' });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Reads a Blob as base64.
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parts = reader.result.split(',');
+      resolve({ base64: parts[1], mediaType: blob.type || 'image/jpeg' });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 // Extracts a JPEG frame from a local video file using canvas.

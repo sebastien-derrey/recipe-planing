@@ -18,6 +18,7 @@ type RecipeDraft struct {
 	Description  string                    `json:"description"`
 	Instructions string                    `json:"instructions"`
 	Servings     int                       `json:"servings"`
+	Tags         []string                  `json:"tags,omitempty"`
 	Ingredients  []storage.IngredientInput `json:"ingredients"`
 	SourceURL    string                    `json:"source_url,omitempty"`
 	Error        string                    `json:"error,omitempty"`
@@ -29,8 +30,9 @@ const extractionPrompt = `Extract the recipe from the provided content and retur
   "description": "short one-line summary",
   "instructions": "full cooking instructions as plain text",
   "servings": integer (number of people, default 4),
+  "tags": ["tag1", "tag2"],
   "ingredients": [
-    { "name": "ingredient name in lowercase", "quantity": number, "unit": "g|ml|tsp|tbsp|cup|piece|etc", "notes": "optional preparation notes" }
+    { "name": "ingredient name in lowercase", "quantity": number, "unit": "g|ml|cs|cc|tasse|pièce|botte|gousse|pincée|etc", "notes": "optional preparation notes" }
   ]
 }
 If no recipe is found in the content, return: {"error": "no recipe found"}`
@@ -53,6 +55,24 @@ func (e *ClaudeExtractor) ExtractFromText(ctx context.Context, text string) (*Re
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(
 				anthropic.NewTextBlock(extractionPrompt + "\n\nContent:\n" + text),
+			),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("claude API: %w", err)
+	}
+	return parseDraft(msg)
+}
+
+// ExtractFromImageBase64 asks Claude to extract a recipe from a base64-encoded image.
+func (e *ClaudeExtractor) ExtractFromImageBase64(ctx context.Context, mediaType, base64Data string) (*RecipeDraft, error) {
+	msg, err := e.client.Messages.New(ctx, anthropic.MessageNewParams{
+		Model:     anthropic.ModelClaudeHaiku4_5,
+		MaxTokens: 2048,
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(
+				anthropic.NewTextBlock(extractionPrompt),
+				anthropic.NewImageBlockBase64(mediaType, base64Data),
 			),
 		},
 	})
