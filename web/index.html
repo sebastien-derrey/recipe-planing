@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestionnaire de Recettes</title>
+  <link rel="stylesheet" href="/web/style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="app()" x-init="init()">
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <h1>Recettes</h1>
+      <nav>
+        <button :class="{active: page==='recipes'}"   @click="page='recipes'">Recettes</button>
+        <button :class="{active: page==='planning'}"  @click="page='planning'; loadPlanning()">Planning</button>
+        <button :class="{active: page==='shopping'}"  @click="page='shopping'; loadShopping()">Courses</button>
+        <button :class="{active: page==='pantry'}"    @click="page='pantry'; loadPantry()">Garde-manger</button>
+      </nav>
+      <div class="user-area">
+        <template x-if="user">
+          <div class="user-info">
+            <span x-text="user.name"></span>
+            <button class="btn-sm" @click="logout()">Déconnexion</button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login wall -->
+  <div x-show="!user && userLoaded" class="login-wall">
+    <div class="login-card">
+      <h2>Bienvenue</h2>
+      <p>Connectez-vous pour gérer vos recettes et votre planning de la semaine.</p>
+      <form @submit.prevent="login()" class="login-form">
+        <div class="form-row">
+          <label>Identifiant</label>
+          <input type="text" x-model="loginForm.username" required autofocus autocomplete="username">
+        </div>
+        <div class="form-row">
+          <label>Mot de passe</label>
+          <input type="password" x-model="loginForm.password" required autocomplete="current-password">
+        </div>
+        <div x-show="loginError" class="login-error" x-text="loginError"></div>
+        <button type="submit" class="btn-primary btn-large" :disabled="loggingIn">
+          <span x-text="loggingIn ? 'Connexion...' : 'Se connecter'"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <main x-show="user">
+
+    <!-- ── RECIPES PAGE ──────────────────────────────────────────────── -->
+    <div x-show="page==='recipes'">
+      <div class="page-header">
+        <h2>Mes recettes</h2>
+        <button class="btn-primary" @click="openRecipeForm(null)">+ Nouvelle recette</button>
+      </div>
+
+      <div x-show="recipes.length === 0 && !loadingRecipes" class="empty-state">
+        Aucune recette. Ajoutez-en une !
+      </div>
+
+      <div class="recipe-grid">
+        <template x-for="r in recipes" :key="r.id">
+          <div class="recipe-card">
+            <img x-show="r.image_url" :src="r.image_url" class="recipe-thumb" alt="">
+            <div class="recipe-card-body">
+              <h3 x-text="r.title"></h3>
+              <p class="recipe-desc" x-text="r.description"></p>
+              <div class="card-badges">
+                <span class="badge" x-text="r.servings + ' pers.'"></span>
+                <template x-for="tag in (r.tags || [])" :key="tag">
+                  <span class="badge badge-tag" x-text="tag"></span>
+                </template>
+              </div>
+            </div>
+            <div class="recipe-card-actions">
+              <button class="btn-sm" @click="openRecipeForm(r)">Modifier</button>
+              <button class="btn-sm btn-danger" @click="deleteRecipe(r.id)">Supprimer</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── PLANNING PAGE ─────────────────────────────────────────────── -->
+    <div x-show="page==='planning'">
+      <div class="page-header">
+        <h2>Planning de la semaine</h2>
+        <div class="week-nav">
+          <button class="btn-sm" @click="changeWeek(-7)">&#8249;</button>
+          <span x-text="formatWeekLabel(currentWeek)"></span>
+          <button class="btn-sm" @click="changeWeek(7)">&#8250;</button>
+        </div>
+      </div>
+
+      <div class="planning-grid">
+        <template x-for="day in days" :key="day.n">
+          <div class="day-col">
+            <div class="day-header" x-text="day.label"></div>
+            <template x-for="meal in mealTypes" :key="meal">
+              <div class="meal-slot">
+                <div class="meal-label" x-text="meal"></div>
+                <template x-if="getPlanItem(day.n, meal)">
+                  <div class="plan-item">
+                    <span x-text="getPlanItem(day.n, meal).recipe_title"></span>
+                    <div class="plan-item-meta">
+                      <input type="number" min="1" max="20"
+                        :value="getPlanItem(day.n, meal).people_count"
+                        @change="updatePeopleCount(getPlanItem(day.n, meal), $event.target.value)"
+                        class="people-input">
+                      <span>pers.</span>
+                      <button class="btn-icon" @click="removePlanItem(getPlanItem(day.n, meal))">&#x2715;</button>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="!getPlanItem(day.n, meal)">
+                  <select class="recipe-select" @change="addPlanItem(day.n, meal, $event.target.value); $event.target.value=''">
+                    <option value="">+ Ajouter</option>
+                    <template x-for="r in recipes" :key="r.id">
+                      <option :value="r.id" x-text="r.title"></option>
+                    </template>
+                  </select>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── SHOPPING PAGE ─────────────────────────────────────────────── -->
+    <div x-show="page==='shopping'">
+      <div class="page-header">
+        <h2>Liste de courses</h2>
+        <div class="week-nav">
+          <button class="btn-sm" @click="changeWeek(-7); loadShopping()">&#8249;</button>
+          <span x-text="formatWeekLabel(currentWeek)"></span>
+          <button class="btn-sm" @click="changeWeek(7); loadShopping()">&#8250;</button>
+        </div>
+        <button class="btn-primary" @click="printShopping()">Imprimer</button>
+      </div>
+
+      <div x-show="shoppingList.length === 0" class="empty-state">
+        Aucun ingrédient. Ajoutez des recettes au planning !
+      </div>
+
+      <div class="shopping-list" id="shopping-print">
+        <div class="shopping-header" x-show="shoppingList.length > 0">
+          <h3 x-text="'Semaine du ' + formatWeekLabel(currentWeek)"></h3>
+          <span class="shopping-progress"
+            x-text="shoppingList.filter(i=>i.checked).length + ' / ' + shoppingList.length + ' articles'">
+          </span>
+        </div>
+        <ul>
+          <template x-for="item in shoppingList" :key="item.ingredient">
+            <li :class="{done: item.checked}">
+              <label class="check-label">
+                <input type="checkbox" :checked="item.checked"
+                  @change="toggleCheck(item, $event.target.checked)">
+                <span class="ingredient-qty">
+                  <span x-text="formatQty(item.needed_qty)"></span>
+                  <span x-show="item.unit" x-text="item.unit"></span>
+                </span>
+                <span>
+                  <span x-text="item.ingredient"></span>
+                  <span class="pantry-deduction" x-show="item.pantry_qty > 0">
+                    (en stock&nbsp;: <span x-text="formatQty(item.pantry_qty)"></span>
+                    <span x-show="item.unit" x-text="item.unit"></span>)
+                  </span>
+                </span>
+              </label>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── PANTRY PAGE ──────────────────────────────────────────────── -->
+    <div x-show="page==='pantry'">
+      <div class="page-header">
+        <h2>Garde-manger</h2>
+        <button class="btn-primary" @click="openPantryForm()">+ Ajouter</button>
+      </div>
+
+      <div x-show="pantry.length === 0 && !loadingPantry" class="empty-state">
+        Aucun ingrédient en stock. Ajoutez ce que vous avez déjà à la maison !
+      </div>
+
+      <div class="pantry-list" x-show="pantry.length > 0">
+        <template x-for="item in pantry" :key="item.id">
+          <div class="pantry-row">
+            <div class="pantry-name" x-text="item.ingredient"></div>
+            <div class="pantry-qty">
+              <span x-text="formatQty(item.quantity)"></span>
+              <span x-text="item.unit" x-show="item.unit"></span>
+            </div>
+            <div class="pantry-actions">
+              <button class="btn-sm" @click="openPantryForm(item)">Modifier</button>
+              <button class="btn-sm btn-danger" @click="deletePantryItem(item.id)">Supprimer</button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Pantry form inline -->
+      <div class="pantry-form-wrap" x-show="showPantryForm">
+        <div class="pantry-form">
+          <h3 x-text="editingPantryItem ? 'Modifier' : 'Ajouter un ingrédient'"></h3>
+          <form @submit.prevent="savePantryItem()">
+            <div class="pantry-form-fields">
+              <div class="form-row">
+                <label>Ingrédient *</label>
+                <input type="text" x-model="pantryForm.ingredient" required placeholder="ex: farine">
+              </div>
+              <div class="pantry-form-row2">
+                <div class="form-row">
+                  <label>Quantité</label>
+                  <input type="number" x-model.number="pantryForm.quantity" min="0" step="any" placeholder="0">
+                </div>
+                <div class="form-row">
+                  <label>Unité</label>
+                  <input type="text" x-model="pantryForm.unit" placeholder="ex: g, ml, pièce" list="units-list">
+                </div>
+              </div>
+            </div>
+            <div class="pantry-form-actions">
+              <button type="button" class="btn-sm" @click="showPantryForm=false">Annuler</button>
+              <button type="submit" class="btn-primary" :disabled="savingPantry"
+                x-text="savingPantry ? 'Enregistrement...' : 'Enregistrer'"></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── RECIPE FORM MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" x-show="showForm" @click.self="showForm=false">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 x-text="editingRecipe ? 'Modifier la recette' : 'Nouvelle recette'"></h3>
+        <button class="btn-icon" @click="showForm=false">&#x2715;</button>
+      </div>
+      <form @submit.prevent="saveRecipe()">
+        <div class="form-row">
+          <label>Titre *</label>
+          <input type="text" x-model="form.title" required>
+        </div>
+        <div class="form-row">
+          <label>Description</label>
+          <input type="text" x-model="form.description">
+        </div>
+        <div class="form-row form-row-2">
+          <div>
+            <label>Portions de base *</label>
+            <input type="number" x-model.number="form.servings" min="1" max="100" required>
+          </div>
+          <div>
+            <label>URL source</label>
+            <input type="url" x-model="form.source_url">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label>Photo</label>
+          <div class="photo-upload-area"
+               @dragover.prevent="photoDragOver=true"
+               @dragleave="photoDragOver=false"
+               @drop.prevent="onPhotoDrop($event)"
+               :class="{dragging: photoDragOver}">
+            <template x-if="form.image_url">
+              <div class="photo-preview">
+                <img :src="form.image_url" alt="Aperçu">
+                <button type="button" class="photo-remove btn-icon" @click="form.image_url=''">&#x2715;</button>
+              </div>
+            </template>
+            <template x-if="!form.image_url">
+              <label class="photo-placeholder">
+                <span x-show="!uploadingPhoto">📷 Cliquer ou glisser une photo ici</span>
+                <span x-show="uploadingPhoto">Envoi en cours...</span>
+                <input type="file" accept="image/*" class="hidden-file-input"
+                       @change="onPhotoSelect($event)" :disabled="uploadingPhoto">
+              </label>
+            </template>
+          </div>
+          <div x-show="photoError" class="login-error" x-text="photoError"></div>
+        </div>
+        <div class="form-row">
+          <label>Tags</label>
+          <div class="tags-input-wrap">
+            <template x-for="(tag, idx) in form.tags" :key="idx">
+              <span class="tag-pill">
+                <span x-text="tag"></span>
+                <button type="button" class="btn-icon" @click="form.tags.splice(idx,1)">&#x2715;</button>
+              </span>
+            </template>
+            <input type="text" class="tags-input" placeholder="Ajouter un tag et appuyer sur Entrée ou ,"
+              @keydown.enter.prevent="addTag($event.target)"
+              @keydown.",".prevent="addTag($event.target)"
+              @blur="addTag($event.target)">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label>Instructions *</label>
+          <textarea x-model="form.instructions" rows="6" required></textarea>
+        </div>
+
+        <!-- Ingredients -->
+        <div class="form-row">
+          <label>Ingrédients</label>
+          <div class="ingredient-list">
+            <template x-for="(ing, idx) in form.ingredients" :key="idx">
+              <div class="ingredient-row">
+                <input type="text"   x-model="ing.name"     placeholder="Ingrédient" class="ing-name">
+                <input type="number" x-model.number="ing.quantity" placeholder="Qté"  class="ing-qty" min="0" step="any">
+                <input type="text"   x-model="ing.unit"     placeholder="Unité"       class="ing-unit" list="units-list">
+                <input type="text"   x-model="ing.notes"    placeholder="Notes"       class="ing-notes">
+                <button type="button" class="btn-icon" @click="form.ingredients.splice(idx,1)">&#x2715;</button>
+              </div>
+            </template>
+          </div>
+          <button type="button" class="btn-sm" @click="form.ingredients.push({name:'',quantity:0,unit:'',notes:''})">
+            + Ajouter un ingrédient
+          </button>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-sm" @click="showForm=false">Annuler</button>
+          <button type="submit" class="btn-primary" :disabled="saving" x-text="saving ? 'Enregistrement...' : 'Enregistrer'"></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Units datalist — add new units here to extend the list -->
+  <datalist id="units-list">
+    <!-- Volume -->
+    <option value="ml">
+    <option value="cl">
+    <option value="dl">
+    <option value="L">
+    <option value="cs">
+    <option value="cc">
+    <option value="tasse">
+    <!-- Poids -->
+    <option value="mg">
+    <option value="g">
+    <option value="kg">
+    <!-- Quantité / conditionnement -->
+    <option value="pièce">
+    <option value="unité">
+    <option value="tranche">
+    <option value="portion">
+    <option value="botte">
+    <option value="bouquet">
+    <option value="gousse">
+    <option value="cube">
+    <option value="sachet">
+    <option value="boîte">
+    <option value="pot">
+    <option value="conserve">
+    <option value="branche">
+    <option value="feuille">
+    <option value="tige">
+    <!-- Petites mesures -->
+    <option value="pincée">
+    <option value="poignée">
+    <option value="filet">
+    <option value="trait">
+    <option value="noix">
+    <!-- Autre -->
+    <option value="cm">
+  </datalist>
+
+  <script src="/web/app.js"></script>
+</body>
+</html>

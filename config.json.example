@@ -1,0 +1,9 @@
+{
+  "port": 8080,
+  "db_path": "recipe_manager.db",
+  "username": "test",
+  "password": "test",
+  "jwt_secret": "change-me-to-a-32-byte-random-string",
+  "anthropic_api_key": "sk-ant-xxxx",
+  "mcp_service_token": "a-long-lived-secret-for-mcp-to-api-calls"
+}

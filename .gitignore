@@ -1,0 +1,21 @@
+# Build output
+recipe_manager
+recipe_manager.exe
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+
+# Config (contains secrets)
+config.json
+
+# Uploaded photos
+uploads/
+
+# Go test cache
+*.test
+
+# OS
+.DS_Store
+Thumbs.db
