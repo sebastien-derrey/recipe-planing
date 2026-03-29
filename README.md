@@ -202,3 +202,54 @@ recipe_manager/
 | `GET` | `/api/weekly-plan?week=YYYY-MM-DD` | Planning de la semaine |
 | `PUT` | `/api/weekly-plan/{id}/items` | Mettre à jour le planning |
 | `GET` | `/api/shopping-list?week=YYYY-MM-DD` | Liste de courses |
+| `GET` | `/api/pantry` | Contenu du garde-manger |
+| `POST` | `/api/pantry` | Ajouter/modifier un article du garde-manger |
+| `DELETE` | `/api/pantry/{id}` | Supprimer un article du garde-manger |
+| `POST` | `/api/import` | Importer une recette (URL, texte ou image) via Claude |
+
+---
+
+## Partage mobile — Web Share Target (PWA)
+
+L'application peut recevoir du contenu partagé directement depuis la feuille de partage de votre téléphone (comme n'importe quelle autre application native).
+
+### Prérequis
+
+- L'application doit être installée en tant que **PWA** sur votre téléphone (voir ci-dessous)
+- `anthropic_api_key` doit être renseigné dans `config.json` (l'extraction de recette utilise Claude)
+- En production, le serveur doit être accessible en **HTTPS** (obligatoire pour les Service Workers)
+
+### Installer l'application sur votre téléphone (PWA)
+
+1. Ouvrez l'application dans **Chrome** (Android) ou **Safari** (iOS)
+2. Appuyez sur le menu du navigateur (⋮ ou partager)
+3. Sélectionnez **"Ajouter à l'écran d'accueil"** / **"Installer l'application"**
+4. L'icône de l'application apparaît sur votre écran d'accueil
+
+> Une fois installée, l'application apparaît dans la liste des destinations de partage de votre téléphone.
+
+### Partager une recette
+
+#### Depuis un article / lien web
+
+1. Ouvrez l'article contenant la recette dans votre navigateur
+2. Appuyez sur **Partager** → sélectionnez **Recettes**
+3. L'application s'ouvre, Claude extrait automatiquement la recette et la sauvegarde
+4. Vous êtes redirigé vers la recette créée
+
+#### Depuis une photo
+
+1. Ouvrez la photo d'une recette dans votre galerie
+2. Appuyez sur **Partager** → sélectionnez **Recettes**
+3. La photo est envoyée à Claude qui extrait les ingrédients et les étapes
+4. La recette est sauvegardée avec la photo
+
+#### Depuis n'importe quel texte
+
+1. Sélectionnez du texte contenant une recette dans n'importe quelle application
+2. Partagez-le vers **Recettes**
+3. Claude extrait et sauvegarde la recette
+
+### Comportement si non connecté
+
+Si vous n'êtes pas encore connecté au moment du partage, l'application vous invite à vous connecter puis reprend automatiquement l'import après la connexion.
