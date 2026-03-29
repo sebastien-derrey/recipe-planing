@@ -500,9 +500,14 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   .check-label input[type=checkbox] { width: 22px; height: 22px; margin-top: 0; }
   .ingredient-qty { min-width: 64px; font-size: .9rem; }
 
-  /* ── Planning: scroll-snap, wider columns ── */
+  /* ── Planning: contenu limité + scroll interne ── */
+  /* On empêche le body de scroller horizontalement */
+  html { overflow-x: hidden; }
+  /* La grille se limite à la largeur de la fenêtre et scroll en interne */
   .planning-grid {
     grid-template-columns: repeat(7, minmax(150px, 1fr));
+    max-width: calc(100vw - 1.75rem); /* viewport - padding main x2 */
+    overflow-x: auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     gap: .4rem;
@@ -513,10 +518,16 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
   .recipe-select { padding: .4rem .25rem; font-size: .82rem; }
   .week-nav { font-size: .82rem; gap: .35rem; }
 
-  /* ── Pantry ── */
+  /* ── Pantry: row sur 2 lignes pour éviter le débordement ── */
   .pantry-form { max-width: 100%; }
-  .pantry-row  { padding: .8rem 1rem; }
-  .pantry-name { font-size: .9rem; }
+  .pantry-row {
+    flex-wrap: wrap;
+    gap: .35rem .5rem;
+    padding: .75rem 1rem;
+  }
+  .pantry-name { flex: 1 1 100%; font-size: .9rem; }
+  .pantry-qty  { min-width: 0; flex: 1; }
+  .pantry-actions { flex: 0 0 auto; }
 
   /* ── Login ── */
   .login-card { padding: 2rem 1.25rem; margin: 1rem; border-radius: var(--radius); }
