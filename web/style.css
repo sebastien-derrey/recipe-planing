@@ -509,10 +509,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
     gap: .75rem;
     max-width: 100%;
   }
-  /* Chaque jour : header sur toute la largeur + 3 repas côte à côte */
+  /* Chaque jour : header + repas empilés verticalement */
   .day-col {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-direction: column;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
@@ -521,26 +521,22 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
     min-width: 0;
   }
   .day-header {
-    grid-column: 1 / -1;
     border-radius: 0;
     font-size: .9rem;
-    padding: .5rem;
+    padding: .5rem .75rem;
   }
   .meal-slot {
     border: none;
     border-top: 1px solid var(--border);
-    border-right: 1px solid var(--border);
     border-radius: 0 !important;
-    padding: .5rem .4rem;
-    min-height: 70px;
+    padding: .6rem .75rem;
   }
-  .meal-slot:last-child { border-right: none; }
-  .meal-label { font-size: .65rem; margin-bottom: .2rem; }
-  .plan-item { font-size: .78rem; }
-  .plan-item > span { font-size: .78rem; }
-  .plan-item-meta { gap: .15rem; flex-wrap: wrap; }
-  .people-input { width: 36px; height: 30px; font-size: .78rem; padding: .1rem; }
-  .recipe-select { padding: .3rem .15rem; font-size: .72rem; }
+  .meal-slot:last-child { border-radius: 0; }
+  .meal-label { font-size: .72rem; margin-bottom: .2rem; }
+  .plan-item { font-size: .85rem; }
+  .plan-item-meta { gap: .25rem; }
+  .people-input { width: 42px; height: 32px; font-size: .85rem; }
+  .recipe-select { padding: .35rem .5rem; font-size: .82rem; }
   .week-nav { font-size: .82rem; gap: .35rem; }
 
   /* ── Pantry: row sur 2 lignes pour éviter le débordement ── */
