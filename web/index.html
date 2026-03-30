@@ -327,6 +327,7 @@
       <div class="rv-hero" x-show="viewingRecipe?.image_url">
         <img :src="viewingRecipe?.image_url" class="rv-image" alt="">
       </div>
+      <div class="rv-body">
       <div class="rv-meta">
         <span class="badge" x-show="viewingRecipe?.servings" x-text="(viewingRecipe?.servings || '') + ' pers.'"></span>
         <template x-for="tag in (viewingRecipe?.tags || [])" :key="tag">
@@ -375,6 +376,7 @@
           </template>
         </ol>
       </div>
+      </div><!-- /rv-body -->
 
     </div>
   </div>

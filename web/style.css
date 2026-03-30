@@ -440,6 +440,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
 .rv-hero { margin: 0 -1.5rem; }
 .rv-image { width: 100%; max-height: 260px; object-fit: cover; display: block; }
 
+.rv-body { padding: 0 1.5rem; }
 .rv-meta { display: flex; flex-wrap: wrap; gap: .4rem; padding: .9rem 0 .2rem; }
 .badge-source { background: #e8f0fe; color: #1a73e8; text-decoration: none; }
 .badge-source:hover { background: #d2e3fc; }
@@ -451,6 +452,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
   display: flex; border-bottom: 2px solid var(--border);
   margin: .6rem -1.5rem 0; padding: 0 1.5rem;
 }
+/* Panels */
 .rv-tab {
   background: none; border: none; cursor: pointer;
   padding: .65rem 1.1rem; font-size: .95rem; font-weight: 500;
@@ -460,7 +462,6 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
 .rv-tab.active { color: var(--green); border-bottom-color: var(--green); }
 .rv-tab:hover  { color: var(--text); }
 
-/* Panels */
 .rv-panel { padding: 1rem 0 .25rem; }
 .rv-empty  { color: var(--grey); font-size: .9rem; }
 
@@ -564,7 +565,8 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
   .modal-overlay { align-items: flex-end; padding: 0; backdrop-filter: none; }
   .modal {
     border-radius: 20px 20px 0 0; max-width: 100%; width: 100%;
-    max-height: 92vh;
+    max-height: 92vh; overflow-y: auto;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .modal::before {
     content: ''; display: block; width: 36px; height: 4px;
@@ -573,6 +575,12 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
   }
   .modal-header { padding: .9rem 1.1rem; }
   .modal form   { padding: 1rem 1.1rem; gap: .875rem; }
+
+  /* ── Recipe view modal mobile ── */
+  .recipe-view-modal .rv-body { padding: 0 1rem; }
+  .recipe-view-modal .rv-hero { margin: 0 -1rem; }
+  .recipe-view-modal .rv-tabs { margin: .6rem -1rem 0; padding: 0 1rem; }
+  .rv-panel { padding-bottom: 1.5rem; }
 
   /* ── Shopping list ── */
   .shopping-list { padding: 1rem; border-radius: var(--radius); }
