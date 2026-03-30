@@ -68,6 +68,7 @@ function app() {
     showRecipeView: false,
     viewingRecipe: null,
     recipeTab: 'ingredients',
+    _wakeLock: null,
 
     // Form
     showForm: false,
@@ -157,6 +158,14 @@ function app() {
       this.viewingRecipe = await res.json();
       this.recipeTab = 'ingredients';
       this.showRecipeView = true;
+      if ('wakeLock' in navigator) {
+        try { this._wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+      }
+    },
+
+    closeRecipeView() {
+      this.showRecipeView = false;
+      if (this._wakeLock) { this._wakeLock.release(); this._wakeLock = null; }
     },
 
     recipeSteps() {

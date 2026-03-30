@@ -311,15 +311,15 @@
   </main>
 
   <!-- ── RECIPE VIEW MODAL ─────────────────────────────────────────── -->
-  <div class="modal-overlay" x-show="showRecipeView" @click.self="showRecipeView=false" x-cloak>
+  <div class="modal-overlay" x-show="showRecipeView" @click.self="closeRecipeView()" x-cloak>
     <div class="modal recipe-view-modal" x-show="viewingRecipe">
 
       <!-- Header -->
       <div class="modal-header">
         <h3 x-text="viewingRecipe?.title"></h3>
         <div style="display:flex;gap:.5rem;align-items:center">
-          <button class="btn-sm" @click="openRecipeForm(viewingRecipe); showRecipeView=false">Modifier</button>
-          <button class="btn-icon" @click="showRecipeView=false">&#x2715;</button>
+          <button class="btn-sm" @click="openRecipeForm(viewingRecipe); closeRecipeView()">Modifier</button>
+          <button class="btn-icon" @click="closeRecipeView()">&#x2715;</button>
         </div>
       </div>
 
