@@ -135,6 +135,7 @@
               </div>
             </div>
             <div class="recipe-card-actions">
+              <button class="btn-sm btn-view" @click="openRecipeView(r)">Voir</button>
               <button class="btn-sm" @click="openRecipeForm(r)">Modifier</button>
               <button class="btn-sm btn-danger" @click="deleteRecipe(r.id)">Supprimer</button>
             </div>
@@ -308,6 +309,75 @@
     </div>
 
   </main>
+
+  <!-- ── RECIPE VIEW MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" x-show="showRecipeView" @click.self="showRecipeView=false" x-cloak>
+    <div class="modal recipe-view-modal" x-show="viewingRecipe">
+
+      <!-- Header -->
+      <div class="modal-header">
+        <h3 x-text="viewingRecipe?.title"></h3>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <button class="btn-sm" @click="openRecipeForm(viewingRecipe); showRecipeView=false">Modifier</button>
+          <button class="btn-icon" @click="showRecipeView=false">&#x2715;</button>
+        </div>
+      </div>
+
+      <!-- Image + meta -->
+      <div class="rv-hero" x-show="viewingRecipe?.image_url">
+        <img :src="viewingRecipe?.image_url" class="rv-image" alt="">
+      </div>
+      <div class="rv-meta">
+        <span class="badge" x-show="viewingRecipe?.servings" x-text="(viewingRecipe?.servings || '') + ' pers.'"></span>
+        <template x-for="tag in (viewingRecipe?.tags || [])" :key="tag">
+          <span class="badge badge-tag" x-text="tag"></span>
+        </template>
+        <a x-show="viewingRecipe?.source_url" :href="viewingRecipe?.source_url"
+           target="_blank" rel="noopener" class="badge badge-source">Source ↗</a>
+      </div>
+      <p class="rv-desc" x-show="viewingRecipe?.description" x-text="viewingRecipe?.description"></p>
+
+      <!-- Tabs -->
+      <div class="rv-tabs">
+        <button class="rv-tab" :class="{active: recipeTab==='ingredients'}"
+                @click="recipeTab='ingredients'">Ingrédients</button>
+        <button class="rv-tab" :class="{active: recipeTab==='instructions'}"
+                @click="recipeTab='instructions'">Préparation</button>
+      </div>
+
+      <!-- Ingredients tab -->
+      <div x-show="recipeTab==='ingredients'" class="rv-panel">
+        <template x-if="(viewingRecipe?.ingredients || []).length === 0">
+          <p class="rv-empty">Aucun ingrédient renseigné.</p>
+        </template>
+        <ul class="rv-ingredients">
+          <template x-for="ing in (viewingRecipe?.ingredients || [])" :key="ing.id">
+            <li class="rv-ing-row">
+              <span class="rv-ing-name" x-text="ing.name"></span>
+              <span class="rv-ing-qty">
+                <span x-show="ing.quantity" x-text="ing.quantity"></span>
+                <span x-show="ing.unit" x-text="ing.unit"></span>
+              </span>
+              <span class="rv-ing-notes" x-show="ing.notes" x-text="ing.notes"></span>
+            </li>
+          </template>
+        </ul>
+      </div>
+
+      <!-- Instructions tab -->
+      <div x-show="recipeTab==='instructions'" class="rv-panel">
+        <template x-if="recipeSteps().length === 0">
+          <p class="rv-empty">Aucune instruction renseignée.</p>
+        </template>
+        <ol class="rv-steps">
+          <template x-for="(step, i) in recipeSteps()" :key="i">
+            <li class="rv-step" x-text="step"></li>
+          </template>
+        </ol>
+      </div>
+
+    </div>
+  </div>
 
   <!-- ── RECIPE FORM MODAL ─────────────────────────────────────────── -->
   <div class="modal-overlay" x-show="showForm" @click.self="showForm=false">

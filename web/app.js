@@ -64,6 +64,11 @@ function app() {
       'cm',
     ],
 
+    // Recipe view
+    showRecipeView: false,
+    viewingRecipe: null,
+    recipeTab: 'ingredients',
+
     // Form
     showForm: false,
     editingRecipe: null,
@@ -145,6 +150,21 @@ function app() {
       const res = await fetch('/api/recipes');
       if (res.ok) this.recipes = await res.json();
       this.loadingRecipes = false;
+    },
+
+    async openRecipeView(recipe) {
+      const res = await fetch(`/api/recipes/${recipe.id}`);
+      this.viewingRecipe = await res.json();
+      this.recipeTab = 'ingredients';
+      this.showRecipeView = true;
+    },
+
+    recipeSteps() {
+      if (!this.viewingRecipe?.instructions) return [];
+      return this.viewingRecipe.instructions
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
     },
 
     openRecipeForm(recipe) {

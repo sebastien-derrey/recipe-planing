@@ -431,6 +431,59 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
 /* ── Nav icons (hidden on desktop) ──────────────────────────────── */
 .nav-icon { display: none; }
 
+/* ── Recipe view button ──────────────────────────────────────────── */
+.btn-view { color: var(--green); border-color: var(--green); }
+
+/* ── Recipe view modal ───────────────────────────────────────────── */
+.recipe-view-modal { max-width: 560px; }
+
+.rv-hero { margin: 0 -1.5rem; }
+.rv-image { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+
+.rv-meta { display: flex; flex-wrap: wrap; gap: .4rem; padding: .9rem 0 .2rem; }
+.badge-source { background: #e8f0fe; color: #1a73e8; text-decoration: none; }
+.badge-source:hover { background: #d2e3fc; }
+
+.rv-desc { color: var(--grey); font-size: .92rem; margin: .2rem 0 .6rem; }
+
+/* Tabs */
+.rv-tabs {
+  display: flex; border-bottom: 2px solid var(--border);
+  margin: .6rem -1.5rem 0; padding: 0 1.5rem;
+}
+.rv-tab {
+  background: none; border: none; cursor: pointer;
+  padding: .65rem 1.1rem; font-size: .95rem; font-weight: 500;
+  color: var(--grey); border-bottom: 3px solid transparent;
+  margin-bottom: -2px; transition: color .15s, border-color .15s;
+}
+.rv-tab.active { color: var(--green); border-bottom-color: var(--green); }
+.rv-tab:hover  { color: var(--text); }
+
+/* Panels */
+.rv-panel { padding: 1rem 0 .25rem; }
+.rv-empty  { color: var(--grey); font-size: .9rem; }
+
+/* Ingredients */
+.rv-ingredients { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .3rem; }
+.rv-ing-row {
+  display: flex; align-items: baseline; gap: .6rem;
+  padding: .55rem .75rem; background: var(--grey-lt);
+  border-radius: var(--radius);
+}
+.rv-ing-name  { flex: 1; font-weight: 500; }
+.rv-ing-qty   { color: var(--green); font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.rv-ing-notes { color: var(--grey); font-size: .82rem; font-style: italic; }
+
+/* Steps */
+.rv-steps { padding-left: 1.1rem; margin: 0; display: flex; flex-direction: column; gap: .75rem; }
+.rv-step {
+  line-height: 1.55; padding: .6rem .75rem .6rem 0;
+  border-bottom: 1px solid var(--border); font-size: .95rem;
+}
+.rv-steps li:last-child { border-bottom: none; }
+.rv-steps li::marker { color: var(--green); font-weight: 700; }
+
 /* ── Print ───────────────────────────────────────────────────────── */
 @media print {
   header, nav, .page-header button, .week-nav, .recipe-grid,
